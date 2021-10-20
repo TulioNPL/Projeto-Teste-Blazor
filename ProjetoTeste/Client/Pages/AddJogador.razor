@@ -1,0 +1,82 @@
+﻿@page "/add"
+@inject HttpClient Http
+
+<h3><b>Adicionar Jogador na Lista</b></h3>
+
+<p>
+    Insira o número da camisa: <input type="number" @bind-value="Num" @bind-value:event="oninput" />
+</p>
+<p>
+    Insira o nome: <input type="text" @bind-value="Nome" @bind-value:event="oninput" />
+</p>
+<p>
+    Insira a idade: <input type="number" @bind-value="Idade" @bind-value:event="oninput" />
+</p>
+<p>
+    Insira o nome do clube: <input type="text" @bind-value="Time" @bind-value:event="oninput" />
+</p>
+
+<p><button class="btn btn-primary" @onclick="Adicionar">Adicionar</button></p>
+
+<br />
+<br />
+
+<p>
+    Insira o ID a ser pesquisado: <input type="number" @bind-value="Id" @bind-value:event="oninput" />
+<p><button class="btn btn-primary" @onclick="Pesquisar">Pesquisar</button></p>
+<p><b>Resultado da Pesquisa: </b>Id: @pesquisado.Id | Nome: @pesquisado.Nome | Time: @pesquisado.Time | Idade: @pesquisado.Idade | Camisa: @pesquisado.Camisa </p>
+</p>
+
+
+@code {
+        private int Id { get; set; }
+        private int Num { get; set; }
+        private int Idade { get; set; }
+        private string Nome { get; set; }
+        private string Time { get; set; }
+        private Jogador pesquisado = new Jogador();
+
+    protected override void OnInitialized()
+    {
+        base.OnInitialized();
+        this.Num = 0;
+        this.Idade = 0;
+        this.Nome = "";
+        this.Time = "";
+    }
+
+    private async void Pesquisar()
+    {
+        Jogador X = await Http.GetFromJsonAsync<Jogador>("Jogador/GetById/"+Id);
+
+        pesquisado.Camisa = X.Camisa;
+        pesquisado.Id = X.Id;
+        pesquisado.Nome = X.Nome;
+        pesquisado.Idade = X.Idade;
+        pesquisado.Time = X.Time;
+        StateHasChanged();
+    }
+
+    private async void Adicionar()
+    {
+
+        try
+        {
+            Jogador novoJ = new Jogador { Camisa = this.Num, Nome = this.Nome, Idade = this.Idade, Time.Id = 1 };
+            HttpResponseMessage e = await Http.PostAsJsonAsync<Jogador>("Jogador/AddJogador", novoJ);
+
+            Jogador X = await e.Content.ReadFromJsonAsync<Jogador>();
+
+            this.Num = 0;
+            this.Idade = 0;
+            this.Nome = "";
+            this.Time = "";
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine(ex.Message);
+        }
+
+    }
+}

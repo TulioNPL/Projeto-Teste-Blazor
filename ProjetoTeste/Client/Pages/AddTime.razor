@@ -1,0 +1,63 @@
+﻿@page "/addT"
+@inject HttpClient Http
+
+<h3><b>Adicionar Time na Lista</b></h3>
+
+<p>
+    Insira o nome: <input type="text" @bind-value="adicionado.Nome" @bind-value:event="oninput" />
+</p>
+<p>
+    Insira a ano de fundação: <input type="number" @bind-value="adicionado.Ano" @bind-value:event="oninput" />
+</p>
+
+<p><button class="btn btn-primary" @onclick="Adicionar">Adicionar</button></p>
+
+<br />
+<br />
+
+<p>
+    Insira o ID a ser pesquisado: <input type="number" @bind-value="Id" @bind-value:event="oninput" />
+<p><button class="btn btn-primary" @onclick="Pesquisar">Pesquisar</button></p>
+<p><b>Resultado da Pesquisa: </b>Id: @pesquisado.Id | Nome: @pesquisado.Nome | Ano: @pesquisado.Ano </p>
+</p>
+
+
+@code {
+    private int Id { get; set; }
+    private Time adicionado = new Time { Ano = 0, Nome = "" };
+    private Time pesquisado { get; set; } = new Time();
+
+    protected override void OnInitialized()
+    {
+        base.OnInitialized();
+    }
+
+    private async void Pesquisar()
+    {
+        Time X = await Http.GetFromJsonAsync<Time>("Time/GetById/" + Id);
+
+        pesquisado.Ano = X.Ano;
+        pesquisado.Id = X.Id;
+        pesquisado.Nome = X.Nome;
+        StateHasChanged();
+    }
+
+    private async void Adicionar()
+    {
+
+        try
+        {
+            HttpResponseMessage e = await Http.PostAsJsonAsync<Time>("Time/AddTime", adicionado);
+
+            Time X = await e.Content.ReadFromJsonAsync<Time>();
+            adicionado.Ano = 0;
+            adicionado.Nome = "";
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine(ex.Message);
+        }
+
+    }
+}

@@ -1,0 +1,104 @@
+﻿@page "/listaT"
+@inject HttpClient Http
+
+<h3><b>Lista De Times</b></h3>
+
+@if (willEdit)
+{
+    <div>
+        <h3>Editar Time</h3>
+        <div>
+            Nome: <input type="text" @bind-value="Editado.Nome" @bind-value:event="oninput" />
+            Ano de Fundação: <input type="number" @bind-value="Editado.Ano" @bind-value:event="oninput" />
+            <button class="btn btn-primary" style="background-color: green;" @onclick="OkEdit">Ok</button>
+        </div>
+    </div>
+}
+
+@if (times == null)
+{
+    <p><em>Loading...</em></p>
+}
+else
+{
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Id</th>
+                <th>Nome</th>
+                <th>Ano de Fundação</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var time in times)
+            {
+                <tr>
+                    <td>@time.Id</td>
+                    <td>@time.Nome</td>
+                    <td>@time.Ano</td>
+                    <button class="btn oi oi-pencil align-middle" style="border-color:blue;color:blue" @onclick="@(() => Edit(time.Id))"></button>
+                    <button class="btn oi oi-trash align-middle" style="border-color: red; color: red" @onclick="@(() => Remove(time.Id))"></button>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@code {
+    private List<Time> times;
+    private bool willEdit;
+    private int EditId = 0;
+    private Time Editado = new Time { Nome = "", Ano = 0 };
+
+    protected override async Task OnInitializedAsync()
+    {
+        willEdit = false;
+
+        try
+        {
+            times = await Http.GetFromJsonAsync<List<Time>>("Time/GetAll");
+        }
+        catch (AccessTokenNotAvailableException exception)
+        {
+            exception.Redirect();
+        }
+    }
+
+    //Abre formulário de edição
+    protected async void Edit(int Id)
+    {
+        EditId = Id;
+        Editado = await Http.GetFromJsonAsync<Time>("Time/GetById/" + EditId);
+        willEdit = true;
+        StateHasChanged();
+        Console.WriteLine("Editando id " + EditId);
+    }
+
+    //Confirmação da edição e fecha formulário
+    protected async void OkEdit()
+    {
+        willEdit = false;
+        HttpResponseMessage e = await Http.PutAsJsonAsync<Time>("Time/EditTime", Editado);
+        RenderList();
+    }
+
+    protected async void Remove(int RemoveId)
+    {
+        HttpResponseMessage e = await Http.DeleteAsync("Time/DelTime/" + RemoveId);
+        Console.WriteLine("Removido id " + RemoveId);
+        RenderList();
+    }
+
+    private async void RenderList()
+    {
+        try
+        {
+            times = await Http.GetFromJsonAsync<List<Time>>("Time/GetAll");
+            StateHasChanged();
+        }
+        catch (AccessTokenNotAvailableException exception)
+        {
+            exception.Redirect();
+        }
+    }
+}

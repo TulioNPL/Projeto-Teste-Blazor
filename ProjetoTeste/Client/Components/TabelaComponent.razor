@@ -1,0 +1,141 @@
+﻿@using System.Reflection
+@inject HttpClient Http
+
+@typeparam TItem
+
+@if (willEdit && tipo == 1)
+{
+    <div>
+        <h3>Editar jogador</h3>
+        <div>
+            Camisa: <input type="number" @bind-value="Editado.Camisa" @bind-value:event="oninput" />
+            Nome: <input type="text" @bind-value="Editado.Nome" @bind-value:event="oninput" />
+            Idade: <input type="number" @bind-value="Editado.Idade" @bind-value:event="oninput" />
+            Clube: <input type="text" @bind-value="Editado.Time" @bind-value:event="oninput" />
+            <button class="btn btn-primary" style="background-color: green;" @onclick="OkEdit">Ok</button>
+        </div>
+    </div>
+} else if(willEdit && tipo == 2)
+{
+    <div>
+        <h3>Editar Time</h3>
+        <div>
+            Nome: <input type="text" @bind-value="TEditado.Nome" @bind-value:event="oninput" />
+            Ano: <input type="number" @bind-value="TEditado.Ano" @bind-value:event="oninput" />
+            <button class="btn btn-primary" style="background-color: green;" @onclick="OkEdit">Ok</button>
+        </div>
+    </div>
+}
+
+@if (lista != null && lista.Count > 0)
+{
+    <table class="table">
+        @Header
+        <tbody>
+            @foreach (var jogador in lista)
+            {
+            <tr>
+                @foreach (var member in memberInfo)
+                {
+                    @if (member.MemberType == MemberTypes.Property)
+                    {
+                        <td>
+                            @jogador.GetType().GetProperty(member.Name).GetValue(jogador)
+                        </td>
+
+                    }
+                }
+                <button class="btn oi oi-pencil align-middle" style="border-color:blue;color:blue" @onclick="@(() => Edit(jogador.GetType().GetProperty("Id").GetValue(jogador).ToString()))"></button>
+                <button class="btn oi oi-trash align-middle" style="border-color: red; color: red" @onclick="@(() => Remove(jogador.GetType().GetProperty("Id").GetValue(jogador).ToString()))"></button>
+            </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@code {
+    [Parameter]
+    public RenderFragment Header { get; set; }
+
+    [Parameter]
+    public List<TItem> lista { get; set; }
+    MemberInfo[] memberInfo;
+
+    [Parameter]
+    public EventCallback atualizou { get; set; }
+
+    private int tipo;
+    private int EditId = 0;
+    private bool willEdit;
+    private Jogador Editado = new Jogador { Camisa = 0, Idade = 0, Nome = "", Time = "" };
+    private Time TEditado = new Time { Ano = 0, Nome = "" };
+
+    protected override void OnInitialized()
+    {
+        base.OnInitialized();
+
+        willEdit = false;
+
+        if (lista != null && lista.Count > 0)
+        {
+            Type typeOfItem = this.lista[0].GetType();
+            memberInfo = typeOfItem.GetMembers();
+            if (typeOfItem == typeof(Jogador)) tipo = 1;
+            else tipo = 2;
+        }
+    }
+
+    //Confirmação da edição e fecha formulário
+    protected async void OkEdit()
+    {
+        willEdit = false;
+
+        if(tipo == 1)
+        {
+            Jogador novoJ = new Jogador { Id = EditId, Camisa = Editado.Camisa, Nome = Editado.Nome, Idade = Editado.Idade, Time = Editado.Time };
+            HttpResponseMessage e = await Http.PutAsJsonAsync<Jogador>("Jogador/EditJogador", novoJ);
+        } else if (tipo == 2)
+        {
+            Time novoJ = new Time { Id = EditId, Nome = TEditado.Nome, Ano = TEditado.Ano };
+            HttpResponseMessage e = await Http.PutAsJsonAsync<Time>("Time/EditTime", novoJ);
+        }
+        //Callback
+        await atualizou.InvokeAsync();
+    }
+
+    //Abre formulário de edição
+    protected async void Edit(string Id)
+    {
+        EditId = int.Parse(Id);
+
+        if (tipo == 1)
+        {
+            Editado = await Http.GetFromJsonAsync<Jogador>("Jogador/GetById/" + EditId);
+        }
+        else if(tipo == 2)
+        {
+            TEditado = await Http.GetFromJsonAsync<Time>("Time/GetById/" + EditId);
+        }
+        willEdit = true;
+        StateHasChanged();
+        Console.WriteLine("Editando id "+EditId);
+    }
+
+    //Remove jogador selecionado
+    protected async void Remove(string Id)
+    {
+        int RemoveId = int.Parse(Id);
+
+        if (tipo == 1)
+        {
+            Jogador novoJ = new Jogador { Id = RemoveId };
+            HttpResponseMessage e = await Http.DeleteAsync("Jogador/DelJogador/"+RemoveId);
+        } else if(tipo == 2)
+        {
+            Time novoT = new Time { Id = RemoveId };
+            HttpResponseMessage e = await Http.DeleteAsync("Time/DelTime/" + RemoveId);
+        }
+        Console.WriteLine("Removido id "+RemoveId);
+        await atualizou.InvokeAsync();
+    }
+}

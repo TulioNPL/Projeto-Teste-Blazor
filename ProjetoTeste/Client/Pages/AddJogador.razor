@@ -13,7 +13,7 @@
     Insira a idade: <input type="number" @bind-value="Idade" @bind-value:event="oninput" />
 </p>
 <p>
-    Insira o nome do clube: <input type="text" @bind-value="Time" @bind-value:event="oninput" />
+    Insira o ID do clube: <input type="text" @bind-value="Times" @bind-value:event="oninput" />
 </p>
 
 <p><button class="btn btn-primary" @onclick="Adicionar">Adicionar</button></p>
@@ -24,45 +24,42 @@
 <p>
     Insira o ID a ser pesquisado: <input type="number" @bind-value="Id" @bind-value:event="oninput" />
 <p><button class="btn btn-primary" @onclick="Pesquisar">Pesquisar</button></p>
-<p><b>Resultado da Pesquisa: </b>Id: @pesquisado.Id | Nome: @pesquisado.Nome | Time: @pesquisado.Time | Idade: @pesquisado.Idade | Camisa: @pesquisado.Camisa </p>
+<p><b>Resultado da Pesquisa: </b>Id: @pesquisado.Id | Nome: @pesquisado.Nome | Times: @pesquisado.Times | Idade: @pesquisado.Idade | Camisa: @pesquisado.Camisa </p>
 </p>
 
 
 @code {
-        private int Id { get; set; }
-        private int Num { get; set; }
-        private int Idade { get; set; }
-        private string Nome { get; set; }
-        private string Time { get; set; }
-        private Jogador pesquisado = new Jogador();
+    private int Id { get; set; }
+    private int Num { get; set; }
+    private int Idade { get; set; }
+    private string Nome { get; set; }
+    private int Times { get; set; }
+    private Jogador pesquisado = new Jogador();
 
-    protected override void OnInitialized()
-    {
+    protected override void OnInitialized() {
         base.OnInitialized();
         this.Num = 0;
         this.Idade = 0;
         this.Nome = "";
-        this.Time = "";
+        this.Times = 0;
     }
 
-    private async void Pesquisar()
-    {
-        Jogador X = await Http.GetFromJsonAsync<Jogador>("Jogador/GetById/"+Id);
+    private async void Pesquisar() {
+        Jogador X = await Http.GetFromJsonAsync<Jogador>("Jogador/GetById/" + Id);
 
         pesquisado.Camisa = X.Camisa;
         pesquisado.Id = X.Id;
         pesquisado.Nome = X.Nome;
         pesquisado.Idade = X.Idade;
-        pesquisado.Time = X.Time;
+        pesquisado.Times = X.Times;
+        pesquisado.TimesId = X.TimesId;
         StateHasChanged();
     }
 
-    private async void Adicionar()
-    {
+    private async void Adicionar() {
 
-        try
-        {
-            Jogador novoJ = new Jogador { Camisa = this.Num, Nome = this.Nome, Idade = this.Idade, Time.Id = 1 };
+        try {
+            Jogador novoJ = new Jogador { Camisa = this.Num, Nome = this.Nome, Idade = this.Idade, TimesId = Times };
             HttpResponseMessage e = await Http.PostAsJsonAsync<Jogador>("Jogador/AddJogador", novoJ);
 
             Jogador X = await e.Content.ReadFromJsonAsync<Jogador>();
@@ -70,11 +67,10 @@
             this.Num = 0;
             this.Idade = 0;
             this.Nome = "";
-            this.Time = "";
+            this.Times = 0;
             StateHasChanged();
-        }
-        catch (Exception ex)
-        {
+
+        } catch (Exception ex) {
             Console.WriteLine(ex.Message);
         }
 

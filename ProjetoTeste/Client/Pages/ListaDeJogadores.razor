@@ -3,26 +3,22 @@
 
 <h3><b>Lista De Jogadores</b></h3>
 
-@if (willEdit)
-{
+@if (willEdit) {
     <div>
         <h3>Editar jogador</h3>
         <div>
             Nome: <input type="text" @bind-value="Editado.Nome" @bind-value:event="oninput" />
             Idade: <input type="number" @bind-value="Editado.Idade" @bind-value:event="oninput" />
-            Clube: <input type="text" @bind-value="Editado.Time" @bind-value:event="oninput" />
+            Id do Clube: <input type="number" @bind-value="Editado.TimesId" @bind-value:event="oninput" />
             Camisa: <input type="number" @bind-value="Editado.Camisa" @bind-value:event="oninput" />
             <button class="btn btn-primary" style="background-color: green;" @onclick="OkEdit">Ok</button>
         </div>
     </div>
 }
 
-@if (jogadores == null)
-{
+@if (jogadores == null) {
     <p><em>Loading...</em></p>
-}
-else
-{
+} else {
     <table class="table">
         <thead>
             <tr>
@@ -34,17 +30,16 @@ else
             </tr>
         </thead>
         <tbody>
-            @foreach (var jogador in jogadores)
-            {
-            <tr>
-                <td>@jogador.Id</td>
-                <td>@jogador.Nome</td>
-                <td>@jogador.Idade</td>
-                <td>@jogador.Time</td>
-                <td>@jogador.Camisa</td>
-                <button class="btn oi oi-pencil align-middle" style="border-color:blue;color:blue" @onclick="@(() => Edit(jogador.Id))"></button>
-                <button class="btn oi oi-trash align-middle" style="border-color: red; color: red" @onclick="@(() => Remove(jogador.Id))"></button>
-            </tr>
+            @foreach (var jogador in jogadores) {
+                <tr>
+                    <td>@jogador.Id</td>
+                    <td>@jogador.Nome</td>
+                    <td>@jogador.Idade</td>
+                    <td>@times.FirstOrDefault(x => x.Id == jogador.TimesId).Nome</td>
+                    <td>@jogador.Camisa</td>
+                    <button class="btn oi oi-pencil align-middle" style="border-color:blue;color:blue" @onclick="@(() => Edit(jogador.Id))"></button>
+                    <button class="btn oi oi-trash align-middle" style="border-color: red; color: red" @onclick="@(() => Remove(jogador.Id))"></button>
+                </tr>
             }
         </tbody>
     </table>
@@ -53,58 +48,52 @@ else
 
 @code {
     private List<Jogador> jogadores;
+    private List<Time> times;
     private bool willEdit;
     private int EditId = 0;
-    private Jogador Editado = new Jogador { Camisa = 0, Idade = 0, Nome = "", Time = "" };
+    private Jogador Editado = new Jogador { Camisa = 0, Idade = 0, Nome = "" };
 
-    protected override async Task OnInitializedAsync()
-    {
+    protected override async Task OnInitializedAsync() {
         willEdit = false;
 
-        try
-        {
+        try {
+            times = await Http.GetFromJsonAsync<List<Time>>("Time/GetAll");
             jogadores = await Http.GetFromJsonAsync<List<Jogador>>("Jogador/GetAll");
-        }
-        catch (AccessTokenNotAvailableException exception)
-        {
+        } catch (AccessTokenNotAvailableException exception) {
             exception.Redirect();
         }
     }
 
     //Confirmação da edição e fecha formulário
-    protected async void OkEdit()
-    {
+    protected async void OkEdit() {
         willEdit = false;
         HttpResponseMessage e = await Http.PutAsJsonAsync<Jogador>("Jogador/EditJogador", Editado);
+
         RenderList();
     }
 
     //Abre formulário de edição
-    protected async void Edit(int Id)
-    {
+    protected async void Edit(int Id) {
         EditId = Id;
         Editado = await Http.GetFromJsonAsync<Jogador>("Jogador/GetById/" + EditId);
         willEdit = true;
+
         StateHasChanged();
         Console.WriteLine("Editando id " + EditId);
     }
 
-    protected async void Remove(int RemoveId)
-    {
+    protected async void Remove(int RemoveId) {
         HttpResponseMessage e = await Http.DeleteAsync("Jogador/DelJogador/" + RemoveId);
+
         Console.WriteLine("Removido id " + RemoveId);
         RenderList();
     }
 
-    private async void RenderList()
-    {
-        try
-        {
+    private async void RenderList() {
+        try {
             jogadores = await Http.GetFromJsonAsync<List<Jogador>>("Jogador/GetAll");
             StateHasChanged();
-        }
-        catch (AccessTokenNotAvailableException exception)
-        {
+        } catch (AccessTokenNotAvailableException exception) {
             exception.Redirect();
         }
     }

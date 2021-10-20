@@ -27,13 +27,11 @@
     private Time adicionado = new Time { Ano = 0, Nome = "" };
     private Time pesquisado { get; set; } = new Time();
 
-    protected override void OnInitialized()
-    {
+    protected override void OnInitialized() {
         base.OnInitialized();
     }
 
-    private async void Pesquisar()
-    {
+    private async void Pesquisar() {
         Time X = await Http.GetFromJsonAsync<Time>("Time/GetById/" + Id);
 
         pesquisado.Ano = X.Ano;
@@ -42,20 +40,17 @@
         StateHasChanged();
     }
 
-    private async void Adicionar()
-    {
+    private async void Adicionar() {
 
-        try
-        {
+        try {
             HttpResponseMessage e = await Http.PostAsJsonAsync<Time>("Time/AddTime", adicionado);
 
             Time X = await e.Content.ReadFromJsonAsync<Time>();
             adicionado.Ano = 0;
             adicionado.Nome = "";
             StateHasChanged();
-        }
-        catch (Exception ex)
-        {
+
+        } catch (Exception ex) {
             Console.WriteLine(ex.Message);
         }
 

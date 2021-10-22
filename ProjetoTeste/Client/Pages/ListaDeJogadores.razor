@@ -1,6 +1,9 @@
 ﻿@page "/lista"
 @inject HttpClient Http
 
+@using System.Collections.ObjectModel
+@using System.ComponentModel
+
 <h3><b>Lista De Jogadores</b></h3>
 
 @if (willEdit) {
@@ -19,30 +22,30 @@
 @if (jogadores == null) {
     <p><em>Loading...</em></p>
 } else {
-    <table class="table">
-        <thead>
-            <tr>
-                <th>Id</th>
-                <th>Nome</th>
-                <th>Idade</th>
-                <th>Clube</th>
-                <th>Camisa</th>
-            </tr>
-        </thead>
-        <tbody>
-            @foreach (var jogador in jogadores) {
-                <tr>
-                    <td>@jogador.Id</td>
-                    <td>@jogador.Nome</td>
-                    <td>@jogador.Idade</td>
-                    <td>@times.FirstOrDefault(x => x.Id == jogador.TimesId).Nome</td>
-                    <td>@jogador.Camisa</td>
-                    <button class="btn oi oi-pencil align-middle" style="border-color:blue;color:blue" @onclick="@(() => Edit(jogador.Id))"></button>
-                    <button class="btn oi oi-trash align-middle" style="border-color: red; color: red" @onclick="@(() => Remove(jogador.Id))"></button>
-                </tr>
-            }
-        </tbody>
-    </table>
+
+    <DxDataGrid Data="@jogadores"
+                PageIndex="0"
+                PagerNavigationMode="PagerNavigationMode.InputBox"
+                PagerPageSizeSelectorVisible="true"
+                PagerAllowedPageSizes=@(new int[] {2,5,10,20,50})
+                ShowFilterRow="true"
+                ShowGroupPanel="true"
+                KeyFieldName="@nameof(Jogador.Id)"
+                PageSize="5">
+
+        <DxDataGridCommandColumn Width="150px" />
+
+        <DxDataGridColumn Field="@nameof(Jogador.Nome)" />
+        <DxDataGridSpinEditColumn Field="@nameof(Jogador.Idade)" />
+        <DxDataGridSpinEditColumn Field="@nameof(Jogador.Camisa)" Caption="Nº da Camisa" />
+        <DxDataGridComboBoxColumn Caption="Nome do Clube"
+                                  Data="@times"
+                                  Field="@nameof( Jogador.TimesId )"
+                                  ValueFieldName="@nameof(Time.Id)"
+                                  TextFieldName="@nameof(Time.Nome)" />
+
+    </DxDataGrid>
+
 }
 
 
@@ -53,15 +56,30 @@
     private int EditId = 0;
     private Jogador Editado = new Jogador { Camisa = 0, Idade = 0, Nome = "" };
 
+    [Parameter]
+    [DefaultValue(PagerNavigationMode.Auto)]
+    public PagerNavigationMode PagerNavigationMode { get; set; }
+
     protected override async Task OnInitializedAsync() {
         willEdit = false;
 
         try {
-            times = await Http.GetFromJsonAsync<List<Time>>("Time/GetAll");
-            jogadores = await Http.GetFromJsonAsync<List<Jogador>>("Jogador/GetAll");
+            Task TTimes = GetJogadores();
+            Task TJogadores = GetTimes();
+
+            await Task.WhenAll(TTimes, TJogadores);
+
         } catch (AccessTokenNotAvailableException exception) {
             exception.Redirect();
         }
+    }
+
+    private async Task GetJogadores() {
+        jogadores = await Http.GetFromJsonAsync<List<Jogador>>("Jogador/GetAll");
+    }
+
+    private async Task GetTimes() {
+        times = await Http.GetFromJsonAsync<List<Time>>("Time/GetAll");
     }
 
     //Confirmação da edição e fecha formulário

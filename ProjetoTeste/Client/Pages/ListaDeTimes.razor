@@ -17,26 +17,25 @@
 @if (times == null) {
     <p><em>Loading...</em></p>
 } else {
-    <table class="table">
-        <thead>
-            <tr>
-                <th>Id</th>
-                <th>Nome</th>
-                <th>Ano de Fundação</th>
-            </tr>
-        </thead>
-        <tbody>
-            @foreach (var time in times) {
-                <tr>
-                    <td>@time.Id</td>
-                    <td>@time.Nome</td>
-                    <td>@time.Ano</td>
-                    <button class="btn oi oi-pencil align-middle" style="border-color:blue;color:blue" @onclick="@(() => Edit(time.Id))"></button>
-                    <button class="btn oi oi-trash align-middle" style="border-color: red; color: red" @onclick="@(() => Remove(time.Id))"></button>
-                </tr>
-            }
-        </tbody>
-    </table>
+
+<DxDataGrid Data="@times"
+            PageIndex="0"
+            PagerNavigationMode="PagerNavigationMode.InputBox"
+            PagerPageSizeSelectorVisible="true"
+            PagerAllowedPageSizes=@(new int[] {2,5,10,20,50})
+            ShowFilterRow="true"
+            ShowGroupPanel="true"
+            KeyFieldName="@nameof(Time.Id)"
+            PageSize="5">
+
+        <DxDataGridCommandColumn Width="150px" />
+
+        <DxDataGridColumn Field="@nameof(Time.Nome)" 
+                          Caption="Nome do Clube"/>
+        <DxDataGridSpinEditColumn Field="@nameof(Time.Ano)" 
+                                  Caption="Ano de Fundação" />
+
+</DxDataGrid>
 }
 
 @code {

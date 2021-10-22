@@ -26,6 +26,8 @@ namespace ProjetoTeste.Client
 
             builder.Services.AddApiAuthorization();
 
+            builder.Services.AddDevExpressBlazor();
+
             await builder.Build().RunAsync();
         }
     }

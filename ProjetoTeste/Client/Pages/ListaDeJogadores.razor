@@ -6,24 +6,15 @@
 
 <h3><b>Lista De Jogadores</b></h3>
 
-@if (willEdit) {
-    <div>
-        <h3>Editar jogador</h3>
-        <div>
-            Nome: <input type="text" @bind-value="Editado.Nome" @bind-value:event="oninput" />
-            Idade: <input type="number" @bind-value="Editado.Idade" @bind-value:event="oninput" />
-            Id do Clube: <input type="number" @bind-value="Editado.TimesId" @bind-value:event="oninput" />
-            Camisa: <input type="number" @bind-value="Editado.Camisa" @bind-value:event="oninput" />
-            <button class="btn btn-primary" style="background-color: green;" @onclick="OkEdit">Ok</button>
-        </div>
-    </div>
-}
-
-@if (jogadores == null) {
-    <p><em>Loading...</em></p>
+@if (Jogadores == null) {
+    <p><em>Carregando...</em></p>
 } else {
 
-    <DxDataGrid Data="@jogadores"
+    <DxDataGrid Data="@Jogadores"
+                RowRemovingAsync="@OnRowRemovingAsync"
+                RowUpdatingAsync="@OnRowUpdatingAsync"
+                RowInsertingAsync="@OnRowInsertingAsync"
+                InitNewRow="@OnInitNewRowAsync"
                 PageIndex="0"
                 PagerNavigationMode="PagerNavigationMode.InputBox"
                 PagerPageSizeSelectorVisible="true"
@@ -31,18 +22,28 @@
                 ShowFilterRow="true"
                 ShowGroupPanel="true"
                 KeyFieldName="@nameof(Jogador.Id)"
-                PageSize="5">
+                PageSize="10"
+                EditMode="DataGridEditMode.PopupEditForm">
 
-        <DxDataGridCommandColumn Width="150px" />
 
-        <DxDataGridColumn Field="@nameof(Jogador.Nome)" />
-        <DxDataGridSpinEditColumn Field="@nameof(Jogador.Idade)" />
-        <DxDataGridSpinEditColumn Field="@nameof(Jogador.Camisa)" Caption="Nº da Camisa" />
+        <DxDataGridColumn Field="@nameof(Jogador.Nome)"
+                          TextAlignment="@DataGridTextAlign.Left"
+                          Width="200px" />
+        <DxDataGridSpinEditColumn Field="@nameof(Jogador.Idade)"
+                                  TextAlignment="@DataGridTextAlign.Left"
+                                  Width="50px" />
+        <DxDataGridSpinEditColumn Field="@nameof(Jogador.Camisa)" Caption="Nº da Camisa"
+                                  TextAlignment="@DataGridTextAlign.Left"
+                                  Width="60px" />
         <DxDataGridComboBoxColumn Caption="Nome do Clube"
-                                  Data="@times"
+                                  Data="@Times"
                                   Field="@nameof( Jogador.TimesId )"
                                   ValueFieldName="@nameof(Time.Id)"
-                                  TextFieldName="@nameof(Time.Nome)" />
+                                  TextFieldName="@nameof(Time.Nome)"
+                                  TextAlignment="@DataGridTextAlign.Left"
+                                  Width="200px" />
+
+        <DxDataGridCommandColumn Width="60px" />
 
     </DxDataGrid>
 
@@ -50,18 +51,10 @@
 
 
 @code {
-    private List<Jogador> jogadores;
-    private List<Time> times;
-    private bool willEdit;
-    private int EditId = 0;
-    private Jogador Editado = new Jogador { Camisa = 0, Idade = 0, Nome = "" };
-
-    [Parameter]
-    [DefaultValue(PagerNavigationMode.Auto)]
-    public PagerNavigationMode PagerNavigationMode { get; set; }
+    private List<Jogador> Jogadores;
+    private List<Time> Times;
 
     protected override async Task OnInitializedAsync() {
-        willEdit = false;
 
         try {
             Task TTimes = GetJogadores();
@@ -75,44 +68,68 @@
     }
 
     private async Task GetJogadores() {
-        jogadores = await Http.GetFromJsonAsync<List<Jogador>>("Jogador/GetAll");
+        Jogadores = await Http.GetFromJsonAsync<List<Jogador>>("Jogador/GetAll");
     }
 
     private async Task GetTimes() {
-        times = await Http.GetFromJsonAsync<List<Time>>("Time/GetAll");
+        Times = await Http.GetFromJsonAsync<List<Time>>("Time/GetAll");
     }
 
-    //Confirmação da edição e fecha formulário
-    protected async void OkEdit() {
-        willEdit = false;
-        HttpResponseMessage e = await Http.PutAsJsonAsync<Jogador>("Jogador/EditJogador", Editado);
+    //Remove linha
+    async Task OnRowRemovingAsync(Jogador Deleted) {
+        HttpResponseMessage e = await Http.DeleteAsync("Jogador/DelJogador/" + Deleted.Id);
 
-        RenderList();
-    }
 
-    //Abre formulário de edição
-    protected async void Edit(int Id) {
-        EditId = Id;
-        Editado = await Http.GetFromJsonAsync<Jogador>("Jogador/GetById/" + EditId);
-        willEdit = true;
-
-        StateHasChanged();
-        Console.WriteLine("Editando id " + EditId);
-    }
-
-    protected async void Remove(int RemoveId) {
-        HttpResponseMessage e = await Http.DeleteAsync("Jogador/DelJogador/" + RemoveId);
-
-        Console.WriteLine("Removido id " + RemoveId);
-        RenderList();
-    }
-
-    private async void RenderList() {
-        try {
-            jogadores = await Http.GetFromJsonAsync<List<Jogador>>("Jogador/GetAll");
+        if (e.IsSuccessStatusCode) {
+            //Atualiza tabela
+            int Index = Jogadores.IndexOf(Deleted);
+            Jogadores.RemoveAt(Index);
             StateHasChanged();
-        } catch (AccessTokenNotAvailableException exception) {
-            exception.Redirect();
+        } else {
+            Console.WriteLine("Erro ao remover");
         }
+    }
+
+    //Atualiza linha
+    async Task OnRowUpdatingAsync(Jogador Updated, IDictionary<string, object> NewValues) {
+        Jogador Edited = DicionarioToObject.DictionaryToJogador(Updated, NewValues);
+        Console.WriteLine(Updated.Id);
+        Console.WriteLine(Edited.Id);
+        HttpResponseMessage e = await Http.PutAsJsonAsync<Jogador>("Jogador/EditJogador", Edited);
+
+        if (e.IsSuccessStatusCode) {
+            //Atualiza tabela
+            int Index = Jogadores.IndexOf(Updated);
+            Jogadores[Index].Nome = Edited.Nome;
+            Jogadores[Index].Camisa = Edited.Camisa;
+            Jogadores[Index].Idade = Edited.Idade;
+            Jogadores[Index].TimesId = Edited.TimesId;
+            StateHasChanged();
+        } else {
+            Console.WriteLine("Erro ao editar");
+        }
+    }
+
+    //Insere linha
+    async Task OnRowInsertingAsync(IDictionary<string, object> NewValues) {
+        Jogador Created = new Jogador();
+        Created = DicionarioToObject.DictionaryToJogador(Created, NewValues);
+        HttpResponseMessage e = await Http.PostAsJsonAsync<Jogador>("Jogador/AddJogador", Created);
+
+        if (e.IsSuccessStatusCode) {
+            //Atualiza tabela
+            Jogador J = await e.Content.ReadFromJsonAsync<Jogador>();
+            Created.Id = J.Id;
+            Jogadores.Add(Created);
+            StateHasChanged();
+        } else {
+            Console.WriteLine("Erro ao adicionar");
+        }
+    }
+
+    //Valores default da nova linha
+    Task OnInitNewRowAsync(Dictionary<string, object> Values) {
+        Values.Add(nameof(Jogador.Nome), "Nome do Jogador");
+        return Task.CompletedTask;
     }
 }

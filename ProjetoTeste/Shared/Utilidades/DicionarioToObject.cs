@@ -5,8 +5,8 @@ using System.Text;
 using System.Threading.Tasks;
 
 namespace ProjetoTeste.Shared.Utilidades {
-    static class DicionarioToObject {
-        public static Jogador DictionaryTojogador(Jogador jogador, IDictionary<string, object> value) {
+    public static class DicionarioToObject {
+        public static Jogador DictionaryToJogador(Jogador jogador, IDictionary<string, object> value) {
 
             if (jogador == null) {
                 jogador = new Jogador();
@@ -32,6 +32,28 @@ namespace ProjetoTeste.Shared.Utilidades {
                 }
             }
             return jogador;
+        }
+
+        public static Time DictionaryToTime(Time time, IDictionary<string, object> value) {
+
+            if (time == null) {
+                time = new Time();
+            }
+
+            foreach (string field in value.Keys) {
+                switch (field) {
+                    case "Id":
+                        time.Id = (int)value[nameof(Time.Id)];
+                        break;
+                    case "Ano":
+                        time.Ano = (int)value[nameof(Time.Ano)];
+                        break;
+                    case "Nome":
+                        time.Nome = (string)value[nameof(Time.Nome)];
+                        break;
+                }
+            }
+            return time;
         }
     }
 }

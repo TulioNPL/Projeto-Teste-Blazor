@@ -3,88 +3,101 @@
 
 <h3><b>Lista De Times</b></h3>
 
-@if (willEdit) {
-    <div>
-        <h3>Editar Time</h3>
-        <div>
-            Nome: <input type="text" @bind-value="Editado.Nome" @bind-value:event="oninput" />
-            Ano de Fundação: <input type="number" @bind-value="Editado.Ano" @bind-value:event="oninput" />
-            <button class="btn btn-primary" style="background-color: green;" @onclick="OkEdit">Ok</button>
-        </div>
-    </div>
-}
-
-@if (times == null) {
-    <p><em>Loading...</em></p>
+@if (Times == null) {
+    <p><em>Carregando...</em></p>
 } else {
 
-<DxDataGrid Data="@times"
-            PageIndex="0"
-            PagerNavigationMode="PagerNavigationMode.InputBox"
-            PagerPageSizeSelectorVisible="true"
-            PagerAllowedPageSizes=@(new int[] {2,5,10,20,50})
-            ShowFilterRow="true"
-            ShowGroupPanel="true"
-            KeyFieldName="@nameof(Time.Id)"
-            PageSize="5">
+    <DxDataGrid Data="@Times"
+                PageIndex="0"
+                RowRemovingAsync="@OnRowRemovingAsync"
+                RowUpdatingAsync="@OnRowUpdatingAsync"
+                RowInsertingAsync="@OnRowInsertingAsync"
+                InitNewRow="@OnInitNewRowAsync"
+                PagerNavigationMode="PagerNavigationMode.InputBox"
+                PagerPageSizeSelectorVisible="true"
+                PagerAllowedPageSizes=@(new int[] {2,5,10,20,50})
+                ShowFilterRow="true"
+                ShowGroupPanel="true"
+                KeyFieldName="@nameof(Time.Id)"
+                PageSize="10"
+                EditMode="DataGridEditMode.PopupEditForm">
 
-        <DxDataGridCommandColumn Width="150px" />
 
-        <DxDataGridColumn Field="@nameof(Time.Nome)" 
-                          Caption="Nome do Clube"/>
-        <DxDataGridSpinEditColumn Field="@nameof(Time.Ano)" 
-                                  Caption="Ano de Fundação" />
 
-</DxDataGrid>
+        <DxDataGridColumn Field="@nameof(Time.Nome)"
+                          Caption="Nome do Clube"
+                          TextAlignment="@DataGridTextAlign.Left" />
+        <DxDataGridSpinEditColumn Field="@nameof(Time.Ano)"
+                                  Caption="Ano de Fundação"
+                                  TextAlignment="@DataGridTextAlign.Left" />
+
+        <DxDataGridCommandColumn Width="60px" />
+    </DxDataGrid>
 }
 
 @code {
-    private List<Time> times;
-    private bool willEdit;
-    private int EditId = 0;
-    private Time Editado = new Time { Nome = "", Ano = 0 };
+    private List<Time> Times;
 
     protected override async Task OnInitializedAsync() {
-        willEdit = false;
-
         try {
-            times = await Http.GetFromJsonAsync<List<Time>>("Time/GetAll");
+            Times = await Http.GetFromJsonAsync<List<Time>>("Time/GetAll");
         } catch (AccessTokenNotAvailableException exception) {
             exception.Redirect();
         }
     }
 
-    //Abre formulário de edição
-    protected async void Edit(int Id) {
-        EditId = Id;
-        Editado = await Http.GetFromJsonAsync<Time>("Time/GetById/" + EditId);
-        willEdit = true;
+    //Remove Linha
+    async Task OnRowRemovingAsync(Time Deleted) {
 
-        StateHasChanged();
-        Console.WriteLine("Editando id " + EditId);
-    }
+        HttpResponseMessage e = await Http.DeleteAsync("Time/DelTime/" + Deleted.Id);
 
-    //Confirmação da edição e fecha formulário
-    protected async void OkEdit() {
-        willEdit = false;
-        HttpResponseMessage e = await Http.PutAsJsonAsync<Time>("Time/EditTime", Editado);
-
-        RenderList();
-    }
-
-    protected async void Remove(int RemoveId) {
-        HttpResponseMessage e = await Http.DeleteAsync("Time/DelTime/" + RemoveId);
-
-        Console.WriteLine("Removido id " + RemoveId);
-        RenderList();
-    }
-
-    private async void RenderList() {
-        try {
-            times = await Http.GetFromJsonAsync<List<Time>>("Time/GetAll");
+        if (e.IsSuccessStatusCode) {
+            //Atualiza tabela
+            int Index = Times.IndexOf(Deleted);
+            Times.RemoveAt(Index);
             StateHasChanged();
-        } catch (AccessTokenNotAvailableException exception) {
-            exception.Redirect();
+        } else {
+            Console.WriteLine("Erro ao remover");
         }
+    }
+
+    //Atualiza Linha
+    async Task OnRowUpdatingAsync(Time Updated, IDictionary<string, object> NewValues) {
+        Time Edited = DicionarioToObject.DictionaryToTime(Updated, NewValues);
+        HttpResponseMessage e = await Http.PutAsJsonAsync<Time>("Time/EditTime", Edited);
+
+
+        if (e.IsSuccessStatusCode) {
+            //Atualiza tabela
+            int Index = Times.IndexOf(Updated);
+            Times[Index].Nome = Edited.Nome;
+            Times[Index].Ano = Edited.Ano;
+            StateHasChanged();
+        } else {
+            Console.WriteLine("Erro ao editar");
+        }
+    }
+
+    //Insere Linha na base
+    async Task OnRowInsertingAsync(IDictionary<string, object> NewValues) {
+        Time Created = new Time();
+        Created = DicionarioToObject.DictionaryToTime(Created, NewValues);
+        HttpResponseMessage e = await Http.PostAsJsonAsync<Time>("Time/AddTime", Created);
+
+        if (e.IsSuccessStatusCode) {
+            //Atualiza tabela
+            Time T = await e.Content.ReadFromJsonAsync<Time>();
+            Created.Id = T.Id;
+            Times.Add(Created);
+            StateHasChanged();
+        } else {
+            Console.WriteLine("Erro ao adicionar");
+        }
+    }
+
+    //Valores default da nova linha
+    Task OnInitNewRowAsync(Dictionary<string, object> Values) {
+        Values.Add(nameof(Time.Nome), "Nome do Time");
+        return Task.CompletedTask;
     }
 }

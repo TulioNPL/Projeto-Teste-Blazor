@@ -3,7 +3,7 @@
 # All files
 [*]
 indent_style = space
-guidelines = 120
+guidelines = 80, 120
 
 # Xml files
 [*.xml]

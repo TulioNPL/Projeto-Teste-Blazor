@@ -8,5 +8,4 @@ guidelines = 120
 # Xml files
 [*.xml]
 indent_size = 2
-guidelines = 80
 
